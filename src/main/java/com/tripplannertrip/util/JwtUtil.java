@@ -2,6 +2,7 @@ package com.tripplannertrip.util;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
+import org.springframework.beans.factory.annotation.Value;
 
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
@@ -9,6 +10,7 @@ import java.nio.charset.StandardCharsets;
 
 public class JwtUtil {
 
+    @Value("${app.jwtToken}")
     private String secretKey;
 
     public Claims extractAllClaims(String token) {
@@ -20,7 +22,6 @@ public class JwtUtil {
                 .parseSignedClaims(token).getPayload();
     }
 
-    // Example method to extract a specific claim
     public String extractUsername(String token) {
         return extractAllClaims(token).getSubject();
     }
