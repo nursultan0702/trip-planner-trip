@@ -1,17 +1,16 @@
 package com.tripplannertrip.mapper;
 
+import com.tripplannertrip.entity.PlaceEntity;
 import com.tripplannertrip.model.PlaceRecord;
 import org.mapstruct.Mapper;
-import org.mapstruct.Mapping;
 import org.mapstruct.factory.Mappers;
 
 @Mapper
 public interface PlaceMapper {
 
-    PlaceMapper INSTANCE = Mappers.getMapper(PlaceMapper.class);
+  PlaceMapper INSTANCE = Mappers.getMapper(PlaceMapper.class);
 
-    @Mapping(target = "id", ignore = true)
-    PlaceRecord tripRecordToEntity(PlaceRecord placeRecord);
+  PlaceRecord placeEntityToPlaceRecord(PlaceEntity placeEntity);
 
-    PlaceRecord tripEntityToRecord(PlaceRecord placeRecord);
+  PlaceEntity placeRecordToPlaceEntity(PlaceRecord placeRecord);
 }

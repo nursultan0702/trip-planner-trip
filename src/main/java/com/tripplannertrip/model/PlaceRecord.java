@@ -1,11 +1,10 @@
 package com.tripplannertrip.model;
 
+import java.util.List;
 import lombok.Builder;
 
-import java.util.List;
-
 @Builder
-public record PlaceRecord(Long id,
+public record PlaceRecord(Long tripId,
                           String country,
                           String city,
                           String name,

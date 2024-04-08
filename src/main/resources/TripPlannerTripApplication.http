@@ -1,0 +1,51 @@
+POST http://localhost:8080/v1/api/places
+Content-Type: application/json
+
+{
+  "country": "United States",
+  "city": "213",
+  "name": "Baska Trip",
+  "images": [
+    "https://example.com/image1.jpg",
+    "https://example.com/image2.jpg",
+    "https://example.com/image3.jpg"
+  ]
+}
+
+<> 2024-04-08T180458.201.json
+<> 2024-04-08T180335.201.json
+<> 2024-04-08T180322.201.json
+<> 2024-04-08T175459.201.json
+<> 2024-04-08T175351.201.json
+<> 2024-04-08T175325.500.json
+
+###
+PUT http://localhost:8080/v1/api/places/3
+Content-Type: application/json
+
+{
+  "country": "United States",
+  "city": "213",
+  "name": "213 Trip",
+  "images": [
+    "https://example.com/image1.jpg",
+    "https://example.com/image2.jpg",
+    "https://example.com/image3.jpg"
+  ]
+}
+
+<> 2024-04-08T180443.200.json
+
+###
+GET http://localhost:8080/v1/api/places/3
+Content-Type: application/json
+
+{
+  "tripId": 0,
+  "country": "",
+  "city": "",
+  "name": "",
+  "images": []
+}
+
+<> 2024-04-08T180608.200.json
