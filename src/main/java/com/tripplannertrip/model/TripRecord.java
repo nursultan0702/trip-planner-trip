@@ -6,7 +6,10 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @Builder
-public record TripRecord(String tripName, String tripDescription,
-                         LocalDateTime tripStartDate, LocalDateTime tripEndDate,
-                         String tripStatus, String country, List<Long> members){
+public record TripRecord(String name,
+                         String description,
+                         LocalDateTime startDate,
+                         LocalDateTime endDate,
+                         List<Long> members,
+                         List<Long> placeIds) {
 }

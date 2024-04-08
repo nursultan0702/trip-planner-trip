@@ -2,7 +2,10 @@ package com.tripplannertrip.controller;
 
 import com.tripplannertrip.model.DateSortType;
 import com.tripplannertrip.model.TripRecord;
+import com.tripplannertrip.service.TripService;
 import lombok.RequiredArgsConstructor;
+import org.apache.coyote.Response;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -14,16 +17,18 @@ import java.util.List;
 @RequiredArgsConstructor
 public class TripController {
 
+    private final TripService tripService;
+
     @GetMapping("/trip/{id}")
     public ResponseEntity<TripRecord> getTrip(@PathVariable int id) {
-        return null;
+        var trip = tripService.getById(id);
+        return ResponseEntity.ok().body(trip);
     }
 
     @GetMapping("/trips")
     public ResponseEntity<List<TripRecord>> getTrips(
             @RequestParam LocalDateTime startDate,
             @RequestParam LocalDateTime endDate,
-            @RequestParam String country,
             @RequestParam List<String> emails,
             @RequestParam(defaultValue = "date_asc") DateSortType sort,
             @RequestParam(defaultValue = "0") int page,
@@ -33,7 +38,8 @@ public class TripController {
 
     @PostMapping("/trip")
     public ResponseEntity<TripRecord> createTrip(@RequestBody TripRecord trip) {
-        return null;
+        var createdTrip = tripService.createTrip(trip);
+        return new ResponseEntity<>(createdTrip, HttpStatus.CREATED);
     }
 
     @PatchMapping("/trip/{tripId}")
