@@ -8,5 +8,6 @@ public record PlaceRecord(Long tripId,
                           String country,
                           String city,
                           String name,
+                          Boolean visited,
                           List<String> images) {
 }

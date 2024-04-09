@@ -3,20 +3,15 @@ package com.tripplannertrip.controller;
 import com.tripplannertrip.model.DateSortType;
 import com.tripplannertrip.model.TripRecord;
 import com.tripplannertrip.service.TripService;
+
+import java.beans.PropertyEditorSupport;
 import java.time.LocalDateTime;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.WebDataBinder;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/v1/api/trips")
@@ -31,7 +26,7 @@ public class TripController {
     return ResponseEntity.ok().body(trip);
   }
 
-  @GetMapping("")
+  @GetMapping
   public ResponseEntity<List<TripRecord>> getTrips(
       @RequestParam LocalDateTime startDate,
       @RequestParam LocalDateTime endDate,
@@ -62,4 +57,20 @@ public class TripController {
     return null;
   }
 
+
+  @InitBinder
+  public void initBinder(WebDataBinder binder) {
+    binder.registerCustomEditor(DateSortType.class, new PropertyEditorSupport() {
+      @Override
+      public void setAsText(String text) throws IllegalArgumentException {
+        for (DateSortType type : DateSortType.values()) {
+          if (type.getValue().equalsIgnoreCase(text)) {
+            setValue(type);
+            return;
+          }
+        }
+        throw new IllegalArgumentException("Invalid value for DateSortType: " + text);
+      }
+    });
+  }
 }

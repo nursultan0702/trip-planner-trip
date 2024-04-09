@@ -10,6 +10,6 @@ public record TripRecord(String name,
                          String description,
                          LocalDateTime startDate,
                          LocalDateTime endDate,
-                         List<Long> members,
+                         List<String> members,
                          List<Long> placeIds) {
 }

@@ -4,7 +4,7 @@ Content-Type: application/json
 {
   "country": "United States",
   "city": "213",
-  "name": "Baska Trip",
+  "name": "Baska 4 Trip",
   "images": [
     "https://example.com/image1.jpg",
     "https://example.com/image2.jpg",
