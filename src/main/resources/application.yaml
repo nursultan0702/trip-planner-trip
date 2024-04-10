@@ -1,0 +1,27 @@
+spring:
+  application:
+    name: trip-planner-trip
+  datasource:
+    url: jdbc:postgresql://localhost:5432/trip_planner
+    username: postgres
+    password: admin
+  jpa:
+    hibernate:
+      ddl-auto: update
+  cloud:
+    stream:
+      kafka:
+        binder:
+          brokers: localhost:9092
+      bindings:
+        output:
+          destination: notify-members-event
+          contentType: application/json
+    kafka:
+      producer:
+        key-serializer: org.apache.kafka.common.serialization.StringSerializer
+        value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+
+scheduler:
+  notification:
+    fixed-delay: 3000
