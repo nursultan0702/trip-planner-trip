@@ -1,15 +1,16 @@
 package com.tripplannertrip.model;
 
-import lombok.Builder;
-
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Set;
+import lombok.Builder;
 
 @Builder
-public record TripRecord(String name,
+public record TripRecord(Long tripId,
+                         String name,
                          String description,
                          LocalDateTime startDate,
                          LocalDateTime endDate,
-                         List<String> members,
+                         Set<String> members,
                          List<Long> placeIds) {
 }

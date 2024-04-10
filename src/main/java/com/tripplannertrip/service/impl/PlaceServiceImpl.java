@@ -1,6 +1,9 @@
 package com.tripplannertrip.service.impl;
 
+import static com.tripplannertrip.model.DateSortType.DATE_ASC;
+
 import com.tripplannertrip.entity.PlaceEntity;
+import com.tripplannertrip.entity.TripEntity;
 import com.tripplannertrip.exception.PlaceNotFoundException;
 import com.tripplannertrip.exception.TripNotFoundException;
 import com.tripplannertrip.mapper.PlaceMapper;
@@ -8,91 +11,101 @@ import com.tripplannertrip.model.PlaceRecord;
 import com.tripplannertrip.repository.PlaceRepository;
 import com.tripplannertrip.repository.TripRepository;
 import com.tripplannertrip.service.PlaceService;
-
+import com.tripplannertrip.service.TripService;
 import java.time.LocalDateTime;
-import java.util.HashSet;
+import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
-
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
+@Transactional
 @RequiredArgsConstructor
 public class PlaceServiceImpl implements PlaceService {
 
-    private final PlaceRepository placeRepository;
-    private final TripRepository tripRepository;
-    private final PlaceMapper placeMapper;
+  private final PlaceRepository placeRepository;
+  private final TripRepository tripRepository;
+  private final TripService tripService;
+  private final PlaceMapper placeMapper;
 
-    @Override
-    public Set<PlaceEntity> findExistingPlaces(List<Long> ids) {
-        if (ids.isEmpty()) {
-            return new HashSet<>();
-        }
+  @Override
+  public List<PlaceRecord> getAllPlacesByTripId(Long tripId) {
+    TripEntity trip =
+        tripRepository.findById(tripId).orElseThrow(() -> new TripNotFoundException(tripId));
+    List<PlaceEntity> allByTripId = placeRepository.findByTripsIsIn(Set.of(trip));
 
-        return ids.stream()
-                .map(id -> placeRepository.findById(id)
-                        .orElseThrow(() -> new PlaceNotFoundException(id)))
-                .collect(Collectors.toSet());
+    return allByTripId.stream()
+        .map(placeMapper::placeEntityToPlaceRecord)
+        .toList();
+  }
+
+  @Override
+  public List<PlaceRecord> getPlacesByCriteria(LocalDateTime startDate, LocalDateTime endDate,
+                                               Set<String> emails,
+                                               String country, int page, int limit) {
+
+    List<TripEntity> trips =
+        tripService.getTripEntityByFilter(startDate, endDate, emails, DATE_ASC, page, limit);
+
+    return trips.stream().map(TripEntity::getPlaces).flatMap(Collection::stream)
+        .map(placeMapper::placeEntityToPlaceRecord).toList();
+  }
+
+  @Override
+  public PlaceRecord getPlaceById(Long id) {
+    var place = placeRepository
+        .findById(id)
+        .orElseThrow(() -> new PlaceNotFoundException(id));
+
+    return placeMapper.placeEntityToPlaceRecord(place);
+  }
+
+  @Override
+  public PlaceRecord createPlace(PlaceRecord placeRecord) {
+
+    var placeEntity = placeMapper.placeRecordToPlaceEntity(placeRecord);
+
+    setTrip(placeRecord, placeEntity);
+
+    placeEntity = placeRepository.save(placeEntity);
+    return placeMapper.placeEntityToPlaceRecord(placeEntity);
+  }
+
+  private void setTrip(PlaceRecord placeRecord, PlaceEntity placeEntity) {
+    Set<Long> tripId = placeRecord.tripIds();
+
+    if (tripId != null) {
+      var trips = getTrips(tripId);
+      placeEntity.getTrips().addAll(trips);
     }
+  }
 
-    @Override
-    public List<PlaceRecord> getAllPlacesByTripId(Long tripId) {
-        List<PlaceEntity> allByTripId = placeRepository.findAllByTripId(tripId);
-        return allByTripId.stream()
-                .map(placeMapper::placeEntityToPlaceRecord)
-                .toList();
-    }
+  private Set<TripEntity> getTrips(Set<Long> tripIds) {
+    return tripIds.stream()
+        .map(tripId -> tripRepository.findById(tripId)
+            .orElseThrow(() -> new TripNotFoundException(tripId))).collect(Collectors.toSet());
+  }
 
-    @Override
-    public List<PlaceEntity> getPlacesByCriteria(LocalDateTime startDate,
-                                                 LocalDateTime endDate,
-                                                 List<String> emails,
-                                                 String country) {
-        return placeRepository.findPlacesByCriteria(startDate, endDate, emails, country);
-    }
+  @Override
+  public PlaceRecord updatePlace(Long id, PlaceRecord placeRecord) {
+    var placeEntity =
+        placeRepository.findById(id)
+            .orElseThrow(() -> new PlaceNotFoundException(id));
 
-    @Override
-    public PlaceRecord getPlaceById(Long id) {
-        var place = placeRepository.findById(id).orElseThrow(() -> new PlaceNotFoundException(id));
-        return placeMapper.placeEntityToPlaceRecord(place);
-    }
+    placeEntity.setCountry(placeRecord.country());
+    placeEntity.setCity(placeRecord.city());
+    placeEntity.setName(placeRecord.name());
+    placeEntity.setImages(placeRecord.images());
 
-    @Override
-    public PlaceRecord createPlace(PlaceRecord placeRecord) {
-        var placeEntity = placeMapper.placeRecordToPlaceEntity(placeRecord);
-        Long tripId = placeRecord.tripId();
+    placeEntity = placeRepository.save(placeEntity);
+    return placeMapper.placeEntityToPlaceRecord(placeEntity);
+  }
 
-        if (tripId != null) {
-            var trip =
-                    tripRepository.findById(tripId).orElseThrow(() -> new TripNotFoundException(tripId));
-            placeEntity.getTrips().add(trip);
-        }
-
-        placeEntity = placeRepository.save(placeEntity);
-        return placeMapper.placeEntityToPlaceRecord(placeEntity);
-    }
-
-    @Override
-    public PlaceRecord updatePlace(Long id, PlaceRecord placeRecord) {
-        var placeEntity =
-                placeRepository.findById(id)
-                        .orElseThrow(() -> new PlaceNotFoundException(id));
-
-        placeEntity.setCountry(placeRecord.country());
-        placeEntity.setCity(placeRecord.city());
-        placeEntity.setName(placeRecord.name());
-        placeEntity.setImages(placeRecord.images());
-
-        placeEntity = placeRepository.save(placeEntity);
-        return placeMapper.placeEntityToPlaceRecord(placeEntity);
-    }
-
-    @Override
-    public void deletePlace(Long id) {
-        placeRepository.deleteById(id);
-    }
-
+  @Override
+  public void deletePlace(Long id) {
+    placeRepository.deleteById(id);
+  }
 }

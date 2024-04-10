@@ -2,7 +2,9 @@ package com.tripplannertrip.controller;
 
 import com.tripplannertrip.model.PlaceRecord;
 import com.tripplannertrip.service.PlaceService;
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -23,19 +25,30 @@ public class PlaceController {
 
   private final PlaceService placeService;
 
-  @GetMapping
-  public ResponseEntity<List<PlaceRecord>> getPlacesByTripId(@RequestParam Long tripId) {
+  @GetMapping("/trip/{tripId}")
+  public ResponseEntity<List<PlaceRecord>> getPlacesByTripId(@PathVariable Long tripId) {
     List<PlaceRecord> places = placeService.getAllPlacesByTripId(tripId);
     return ResponseEntity.ok(places);
+  }
+
+  @GetMapping
+  public ResponseEntity<List<PlaceRecord>> getPlaceByFilter(
+      @RequestParam(required = false) LocalDateTime startDate,
+      @RequestParam(required = false) LocalDateTime endDate,
+      @RequestParam(required = false) Set<String> emails,
+      @RequestParam(required = false) String country,
+      @RequestParam(defaultValue = "0") int page,
+      @RequestParam(defaultValue = "10") int limit) {
+    List<PlaceRecord> placesByCriteria =
+        placeService.getPlacesByCriteria(startDate, endDate, emails, country, page, limit);
+    return ResponseEntity.ok(placesByCriteria);
+
   }
 
   @GetMapping("/{id}")
   public ResponseEntity<PlaceRecord> getPlaceById(@PathVariable Long id) {
     PlaceRecord place = placeService.getPlaceById(id);
-    if (place != null) {
-      return ResponseEntity.ok(place);
-    }
-    return ResponseEntity.notFound().build();
+    return ResponseEntity.ok(place);
   }
 
   @PostMapping

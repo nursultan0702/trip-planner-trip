@@ -7,6 +7,7 @@ import com.tripplannertrip.service.TripService;
 import java.beans.PropertyEditorSupport;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -28,14 +29,14 @@ public class TripController {
 
   @GetMapping
   public ResponseEntity<List<TripRecord>> getTrips(
-      @RequestParam LocalDateTime startDate,
-      @RequestParam LocalDateTime endDate,
-      @RequestParam List<String> emails,
+      @RequestParam(required = false) LocalDateTime startDate,
+      @RequestParam(required = false) LocalDateTime endDate,
+      @RequestParam(required = false) Set<String> emails,
       @RequestParam(defaultValue = "date_asc") DateSortType sort,
       @RequestParam(defaultValue = "0") int page,
       @RequestParam(defaultValue = "10") int limit) {
     List<TripRecord> trips =
-        tripService.getTrips(startDate, endDate, emails, sort, page, limit);
+        tripService.getTripRecordByFilter(startDate, endDate, emails, sort, page, limit);
     return ResponseEntity.ok().body(trips);
   }
 
@@ -54,7 +55,8 @@ public class TripController {
 
   @DeleteMapping("/{tripId}")
   public ResponseEntity<TripRecord> deleteTrip(@PathVariable long tripId) {
-    return null;
+    tripService.deleteTrip(tripId);
+    return ResponseEntity.noContent().build();
   }
 
 

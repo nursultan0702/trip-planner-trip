@@ -1,33 +1,37 @@
 package com.tripplannertrip.repository;
 
+import com.tripplannertrip.entity.MemberEntity;
 import com.tripplannertrip.entity.TripEntity;
-import com.tripplannertrip.model.DateSortType;
-
 import java.time.LocalDateTime;
-import java.util.List;
-
+import java.util.Set;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 @Repository
 public interface TripRepository extends JpaRepository<TripEntity, Long> {
+  Page<TripEntity> findByStartDateAfterAndEndDateBeforeAndAndMembersIsIn(
+      LocalDateTime startDate, LocalDateTime endDate, Set<MemberEntity> members, Pageable pageable);
 
-    @Query("SELECT t FROM TripEntity t JOIN t.members m WHERE " +
-            "(:startDate IS NULL OR t.startDate >= :startDate) AND " +
-            "(:endDate IS NULL OR t.endDate <= :endDate) AND " +
-            "(:emails IS NULL OR m.email IN :emails) " +
-            "GROUP BY t.id " + // Group by trip ID to avoid duplicate trips in the result
-            "ORDER BY " +
-            "CASE WHEN :sort = 'date_asc' THEN t.startDate END ASC, " +
-            "CASE WHEN :sort = 'date_desc' THEN t.startDate END DESC")
-    Page<TripEntity> findTrips(@Param("startDate") LocalDateTime startDate,
-                               @Param("endDate") LocalDateTime endDate,
-                               @Param("emails") List<String> emails,
-                               @Param("sort") DateSortType sort,
-                               Pageable pageable);
+  Page<TripEntity> findByStartDateAfterAndEndDateBefore(LocalDateTime startDate,
+                                                        LocalDateTime endDate,
+                                                        Pageable pageable);
+
+  Page<TripEntity> findByStartDateAfter(LocalDateTime startDate,
+                                        Pageable pageable);
+
+  Page<TripEntity> findByEndDateBefore(LocalDateTime endDate,
+                                       Pageable pageable);
+
+
+  Page<TripEntity> findByStartDateAfterAndMembersIsIn(LocalDateTime startDate,
+                                                      Set<MemberEntity> members,
+                                                      Pageable pageable);
+
+  Page<TripEntity> findByEndDateBeforeAndMembersIsIn(LocalDateTime endDate,
+                                                     Set<MemberEntity> members,
+                                                     Pageable pageable);
+
 
 }

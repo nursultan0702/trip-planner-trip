@@ -5,6 +5,7 @@ import com.tripplannertrip.model.DateSortType;
 import com.tripplannertrip.model.TripRecord;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Set;
 
 public interface TripService {
   TripRecord createTrip(TripRecord tripRecord);
@@ -13,10 +14,18 @@ public interface TripService {
 
   TripEntity getEntityById(long id);
 
-  List<TripRecord> getTrips(
+  List<TripRecord> getTripRecordByFilter(
       LocalDateTime startDate,
       LocalDateTime endDate,
-      List<String> emails,
+      Set<String> emails,
+      DateSortType sort,
+      int page,
+      int limit);
+
+  List<TripEntity> getTripEntityByFilter(
+      LocalDateTime startDate,
+      LocalDateTime endDate,
+      Set<String> emails,
       DateSortType sort,
       int page,
       int limit);

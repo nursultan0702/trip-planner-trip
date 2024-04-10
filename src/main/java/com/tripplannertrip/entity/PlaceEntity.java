@@ -32,7 +32,6 @@ public class PlaceEntity {
   private String country;
   private String city;
   private String name;
-  private Boolean visited;
   @ElementCollection
   @CollectionTable(name = "place_images", joinColumns = @JoinColumn(name = "place_id"))
   @Column(name = "image_url")
