@@ -6,9 +6,10 @@ import com.tripplannertrip.model.TripRecord;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
+import org.springframework.security.core.userdetails.User;
 
 public interface TripService {
-  TripRecord createTrip(TripRecord tripRecord);
+  TripRecord createTrip(User user, TripRecord tripRecord);
 
   TripRecord getById(long id);
 

@@ -7,6 +7,7 @@ import lombok.Builder;
 
 @Builder
 public record TripRecord(Long tripId,
+                         String userId,
                          String name,
                          String description,
                          LocalDateTime startDate,

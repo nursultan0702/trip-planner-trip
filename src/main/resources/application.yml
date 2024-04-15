@@ -4,7 +4,7 @@ spring:
   datasource:
     url: jdbc:postgresql://localhost:5432/trip_planner
     username: postgres
-    password: admin
+    password: postgres
   jpa:
     hibernate:
       ddl-auto: update
@@ -25,3 +25,9 @@ spring:
 scheduler:
   notification:
     fixed-delay: 3000
+
+app:
+  jwtSecret: 21ad8624-a69b-4f46-a3a6-d76f4c50082c
+
+server:
+  port: 8888
