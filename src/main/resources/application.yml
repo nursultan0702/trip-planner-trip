@@ -1,13 +1,15 @@
 spring:
   application:
     name: trip-planner-trip
+
   datasource:
     url: jdbc:postgresql://localhost:5432/trip_planner
     username: postgres
-    password: postgres
+    password: admin
   jpa:
     hibernate:
       ddl-auto: update
+
   cloud:
     stream:
       kafka:
@@ -31,3 +33,14 @@ app:
 
 server:
   port: 8888
+
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: http://localhost:8761/eureka/
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: info,health
