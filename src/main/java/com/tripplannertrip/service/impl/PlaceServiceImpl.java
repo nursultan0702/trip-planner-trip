@@ -1,7 +1,5 @@
 package com.tripplannertrip.service.impl;
 
-import static com.tripplannertrip.model.DateSortType.DATE_ASC;
-
 import com.tripplannertrip.entity.PlaceEntity;
 import com.tripplannertrip.entity.TripEntity;
 import com.tripplannertrip.exception.PlaceNotFoundException;
@@ -12,14 +10,17 @@ import com.tripplannertrip.repository.PlaceRepository;
 import com.tripplannertrip.repository.TripRepository;
 import com.tripplannertrip.service.PlaceService;
 import com.tripplannertrip.service.TripService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+
+import static com.tripplannertrip.model.DateSortType.DATE_ASC;
 
 @Service
 @Transactional
@@ -33,9 +34,9 @@ public class PlaceServiceImpl implements PlaceService {
 
   @Override
   public List<PlaceRecord> getAllPlacesByTripId(Long tripId) {
-    TripEntity trip =
+    var trip =
         tripRepository.findById(tripId).orElseThrow(() -> new TripNotFoundException(tripId));
-    List<PlaceEntity> allByTripId = placeRepository.findByTripsIsIn(Set.of(trip));
+    var allByTripId = placeRepository.findByTripsIsIn(Set.of(trip));
 
     return allByTripId.stream()
         .map(placeMapper::placeEntityToPlaceRecord)
@@ -46,8 +47,7 @@ public class PlaceServiceImpl implements PlaceService {
   public List<PlaceRecord> getPlacesByCriteria(LocalDateTime startDate, LocalDateTime endDate,
                                                Set<String> emails,
                                                String country, int page, int limit) {
-
-    List<TripEntity> trips =
+    var trips =
         tripService.getTripEntityByFilter(startDate, endDate, emails, DATE_ASC, page, limit);
 
     return trips.stream().map(TripEntity::getPlaces).flatMap(Collection::stream)
@@ -67,7 +67,6 @@ public class PlaceServiceImpl implements PlaceService {
   public PlaceRecord createPlace(PlaceRecord placeRecord) {
 
     var placeEntity = placeMapper.placeRecordToPlaceEntity(placeRecord);
-
     setTrip(placeRecord, placeEntity);
 
     placeEntity = placeRepository.save(placeEntity);
@@ -75,10 +74,9 @@ public class PlaceServiceImpl implements PlaceService {
   }
 
   private void setTrip(PlaceRecord placeRecord, PlaceEntity placeEntity) {
-    Set<Long> tripId = placeRecord.tripIds();
-
-    if (tripId != null) {
-      var trips = getTrips(tripId);
+    var tripIds = placeRecord.tripIds();
+    if (tripIds != null) {
+      var trips = getTrips(tripIds);
       placeEntity.getTrips().addAll(trips);
     }
   }

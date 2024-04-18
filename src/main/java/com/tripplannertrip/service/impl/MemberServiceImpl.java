@@ -15,7 +15,7 @@ public class MemberServiceImpl implements MemberService {
   private final MemberRepository memberRepository;
 
   @Override
-  public Set<MemberEntity> getMembers(Set<String> emails) {
+  public Set<MemberEntity> getOrCreateMembers(Set<String> emails) {
     Set<MemberEntity> members = new HashSet<>();
     Optional.ofNullable(emails)
         .ifPresent(em ->

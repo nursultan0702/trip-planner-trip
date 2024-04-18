@@ -17,11 +17,13 @@ import com.tripplannertrip.repository.PlaceRepository;
 import com.tripplannertrip.repository.TripRepository;
 import com.tripplannertrip.service.MemberService;
 import com.tripplannertrip.service.TripService;
+
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -45,7 +47,7 @@ public class TripServiceImpl implements TripService {
   public TripRecord createTrip(User user, TripRecord tripRecord) {
 
     var places = findExistingPlaces(tripRecord.placeIds());
-    var members = memberService.getMembers(tripRecord.members());
+    var members = memberService.getOrCreateMembers(tripRecord.members());
 
     var newTripEntity = TripEntity.builder()
         .userId(user.getUsername())
@@ -56,13 +58,19 @@ public class TripServiceImpl implements TripService {
         .members(members)
         .places(places)
         .build();
+
     var savedTrip = tripRepository.save(newTripEntity);
+    createOutboxMessage(savedTrip);
+
+    return tripMapper.entityToRecord(savedTrip);
+  }
+
+  private void createOutboxMessage(TripEntity savedTrip) {
     var outbox = NotificationOutbox.builder()
         .status(PENDING)
         .tripEntity(savedTrip)
         .build();
     notificationOutboxRepository.save(outbox);
-    return tripMapper.entityToRecord(savedTrip);
   }
 
   @Override
@@ -86,7 +94,7 @@ public class TripServiceImpl implements TripService {
 
     var sorting = getSortingType(sort);
     Pageable pageable = PageRequest.of(page, limit, sorting);
-    var members = memberService.getMembers(emails);
+    var members = memberService.getOrCreateMembers(emails);
 
     Page<TripEntity> tripPage = getTripByFilter(startDate, endDate, members, pageable);
 
@@ -101,7 +109,7 @@ public class TripServiceImpl implements TripService {
                                                 int limit) {
     var sorting = getSortingType(sort);
     Pageable pageable = PageRequest.of(page, limit, sorting);
-    var members = memberService.getMembers(emails);
+    var members = memberService.getOrCreateMembers(emails);
 
     return getTripByFilter(startDate, endDate, members, pageable).getContent();
   }
@@ -139,7 +147,7 @@ public class TripServiceImpl implements TripService {
         .orElseThrow(() -> new TripNotFoundException(tripId));
 
     var places = findExistingPlaces(tripRecord.placeIds());
-    var members = memberService.getMembers(tripRecord.members());
+    var members = memberService.getOrCreateMembers(tripRecord.members());
 
     tripEntity.setName(tripRecord.name());
     tripEntity.setDescription(tripRecord.description());
@@ -159,7 +167,7 @@ public class TripServiceImpl implements TripService {
   }
 
   private Set<PlaceEntity> findExistingPlaces(List<Long> ids) {
-    if (ids.isEmpty()) {
+    if (ids == null || ids.isEmpty()) {
       return new HashSet<>();
     }
 
