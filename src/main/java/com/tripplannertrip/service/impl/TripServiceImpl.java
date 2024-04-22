@@ -131,37 +131,11 @@ public class TripServiceImpl implements TripService {
 
   private Page<TripEntity> filterTrips(LocalDateTime startDate, LocalDateTime endDate,
                                        Set<MemberEntity> members, Pageable pageable) {
+
     if (members.isEmpty()) {
-      return filterTripsWithoutMembers(startDate, endDate, pageable);
+      return tripRepository.findByDates(startDate, endDate, pageable);
     } else {
-      return filterTripsWithMembers(startDate, endDate, members, pageable);
-    }
-  }
-
-  private Page<TripEntity> filterTripsWithoutMembers(LocalDateTime startDate, LocalDateTime endDate,
-                                                     Pageable pageable) {
-    if (startDate != null && endDate != null) {
-      return tripRepository.findByStartDateAfterAndEndDateBefore(startDate, endDate, pageable);
-    } else if (startDate != null) {
-      return tripRepository.findByStartDateAfter(startDate, pageable);
-    } else if (endDate != null) {
-      return tripRepository.findByEndDateBefore(endDate, pageable);
-    } else {
-      return Page.empty();
-    }
-  }
-
-  private Page<TripEntity> filterTripsWithMembers(LocalDateTime startDate, LocalDateTime endDate,
-                                                  Set<MemberEntity> members, Pageable pageable) {
-    if (startDate != null && endDate != null) {
-      return tripRepository.findByStartDateAfterAndEndDateBeforeAndMembersIn(startDate, endDate,
-          members, pageable);
-    } else if (startDate != null) {
-      return tripRepository.findByStartDateAfterAndMembersIn(startDate, members, pageable);
-    } else if (endDate != null) {
-      return tripRepository.findByEndDateBeforeAndMembersIn(endDate, members, pageable);
-    } else {
-      return tripRepository.findByMembersIn(members, pageable);
+      return tripRepository.findByDatesAndMembers(startDate, endDate, members, pageable);
     }
   }
 

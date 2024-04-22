@@ -32,6 +32,10 @@ public class MemberServiceImpl implements MemberService {
 
   @Override
   public Set<MemberEntity> getMembers(Set<String> emails) {
+    if (emails == null || emails.isEmpty()) {
+      return Collections.emptySet();
+    }
+
     Set<MemberEntity> members = new HashSet<>();
     emails.forEach(email -> {
       var member = memberRepository.findById(email)

@@ -148,7 +148,7 @@ class TripServiceImplTest {
 
     List<TripEntity> tripEntities = List.of(new TripEntity());
     Page<TripEntity> tripPage = new PageImpl<>(tripEntities);
-    when(tripRepository.findByStartDateAfterAndEndDateBefore(any(), any(), eq(pageable)))
+    when(tripRepository.findByDates(any(), any(), eq(pageable)))
         .thenReturn(tripPage);
 
     TripRecord tripRecord = TripRecord.builder().build();
@@ -165,19 +165,19 @@ class TripServiceImplTest {
   @Test
   void getTripRecordByFilter_NoMembersFound_ReturnsEmptyList() {
     LocalDateTime startDate = LocalDateTime.now();
-    LocalDateTime endDate = LocalDateTime.now().plusDays(10);
-    Set<String> emails = Set.of("user@example.com");
-    DateSortType sortType = DateSortType.DATE_ASC;
-    int page = 0;
-    int limit = 10;
-    Pageable pageable = PageRequest.of(page, limit, Sort.by("startDate").ascending());
+    LocalDateTime endDate = startDate.plusDays(10);
 
+    Pageable pageable = PageRequest.of(0, 10, Sort.by("startDate").ascending());
 
-    when(tripRepository.findByStartDateAfterAndEndDateBefore(any(), any(), eq(pageable)))
-        .thenReturn(Page.empty());
+    Page<TripEntity> emptyPage = new PageImpl<>(Collections.emptyList(), pageable, 0);
+
+    when(
+        tripRepository.findByDates(eq(startDate), eq(endDate), eq(pageable)))
+        .thenReturn(emptyPage);
 
     List<TripRecord> results =
-        tripService.getTripRecordByFilter(startDate, endDate, emails, sortType, page, limit);
+        tripService.getTripRecordByFilter(startDate, endDate, new HashSet<>(),
+            DateSortType.DATE_ASC, 0, 10);
 
     assertTrue(results.isEmpty());
   }
