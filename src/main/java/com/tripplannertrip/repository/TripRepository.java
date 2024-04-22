@@ -11,8 +11,6 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface TripRepository extends JpaRepository<TripEntity, Long> {
-  Page<TripEntity> findByStartDateAfterAndEndDateBeforeAndAndMembersIsIn(
-      LocalDateTime startDate, LocalDateTime endDate, Set<MemberEntity> members, Pageable pageable);
 
   Page<TripEntity> findByStartDateAfterAndEndDateBefore(LocalDateTime startDate,
                                                         LocalDateTime endDate,
@@ -25,13 +23,16 @@ public interface TripRepository extends JpaRepository<TripEntity, Long> {
                                        Pageable pageable);
 
 
-  Page<TripEntity> findByStartDateAfterAndMembersIsIn(LocalDateTime startDate,
-                                                      Set<MemberEntity> members,
-                                                      Pageable pageable);
+  Page<TripEntity> findByStartDateAfterAndEndDateBeforeAndMembersIn(LocalDateTime startDate,
+                                                                    LocalDateTime endDate,
+                                                                    Set<MemberEntity> members,
+                                                                    Pageable pageable);
 
-  Page<TripEntity> findByEndDateBeforeAndMembersIsIn(LocalDateTime endDate,
-                                                     Set<MemberEntity> members,
-                                                     Pageable pageable);
+  Page<TripEntity> findByStartDateAfterAndMembersIn(LocalDateTime startDate,
+                                                    Set<MemberEntity> members, Pageable pageable);
 
+  Page<TripEntity> findByEndDateBeforeAndMembersIn(LocalDateTime endDate, Set<MemberEntity> members,
+                                                   Pageable pageable);
 
+  Page<TripEntity> findByMembersIn(Set<MemberEntity> members, Pageable pageable);
 }

@@ -5,4 +5,5 @@ import java.util.Set;
 
 public interface MemberService {
     Set<MemberEntity> getOrCreateMembers(Set<String> emails);
+    Set<MemberEntity> getMembers(Set<String> emails);
 }

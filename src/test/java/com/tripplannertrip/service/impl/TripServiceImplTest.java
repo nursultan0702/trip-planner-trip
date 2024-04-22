@@ -1,9 +1,18 @@
 package com.tripplannertrip.service.impl;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.eq;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
 import com.tripplannertrip.entity.MemberEntity;
 import com.tripplannertrip.entity.NotificationOutbox;
 import com.tripplannertrip.entity.TripEntity;
-import com.tripplannertrip.exception.PlaceNotFoundException;
 import com.tripplannertrip.exception.TripNotFoundException;
 import com.tripplannertrip.mapper.TripMapper;
 import com.tripplannertrip.model.DateSortType;
@@ -12,22 +21,26 @@ import com.tripplannertrip.repository.NotificationOutboxRepository;
 import com.tripplannertrip.repository.PlaceRepository;
 import com.tripplannertrip.repository.TripRepository;
 import com.tripplannertrip.service.MemberService;
+import java.time.LocalDateTime;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.domain.*;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.security.core.userdetails.User;
 
-import java.time.LocalDateTime;
-import java.util.*;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
-
 @ExtendWith(MockitoExtension.class)
-public class TripServiceImplTest {
+class TripServiceImplTest {
 
   @Mock
   private PlaceRepository placeRepository;
@@ -44,7 +57,7 @@ public class TripServiceImplTest {
   private TripServiceImpl tripService;
 
   @Test
-  public void createTrip_ValidInputs_ReturnsTripRecord() {
+  void createTrip_ValidInputs_ReturnsTripRecord() {
     // Given
     User user = new User("username", "password", Collections.emptyList());
     TripRecord tripRecord = TripRecord.builder()
@@ -60,43 +73,35 @@ public class TripServiceImplTest {
     when(tripRepository.save(any(TripEntity.class))).thenReturn(savedTrip);
     when(tripMapper.entityToRecord(savedTrip)).thenReturn(tripRecord);
 
-    // When
     TripRecord result = tripService.createTrip(user, tripRecord);
 
-    // Then
     assertNotNull(result);
     verify(notificationOutboxRepository).save(any(NotificationOutbox.class));
   }
 
   @Test
-  public void getById_TripExists_ReturnsTripRecord() {
-    // Given
+  void getById_TripExists_ReturnsTripRecord() {
     long id = 1L;
     TripEntity tripEntity = new TripEntity();
     TripRecord tripRecord = TripRecord.builder().build();
     when(tripRepository.findById(id)).thenReturn(Optional.of(tripEntity));
     when(tripMapper.entityToRecord(tripEntity)).thenReturn(tripRecord);
 
-    // When
     TripRecord result = tripService.getById(id);
 
-    // Then
     assertEquals(tripRecord, result);
   }
 
   @Test
-  public void getById_TripNotFound_ThrowsException() {
-    // Given
+  void getById_TripNotFound_ThrowsException() {
     long id = 1L;
     when(tripRepository.findById(id)).thenReturn(Optional.empty());
 
-    // Then
     assertThrows(TripNotFoundException.class, () -> tripService.getById(id));
   }
 
   @Test
-  public void updateTrip_TripExists_UpdatesAndReturnsRecord() {
-    // Given
+  void updateTrip_TripExists_UpdatesAndReturnsRecord() {
     long id = 1L;
     TripRecord updatedRecord = TripRecord.builder().build();
     TripEntity existingTrip = new TripEntity();
@@ -104,30 +109,35 @@ public class TripServiceImplTest {
     when(tripRepository.save(existingTrip)).thenReturn(existingTrip);
     when(tripMapper.entityToRecord(existingTrip)).thenReturn(updatedRecord);
 
-    // When
     TripRecord result = tripService.updateTrip(id, updatedRecord);
 
-    // Then
     assertNotNull(result);
   }
 
   @Test
-  public void deleteTrip_TripExists_DeletesTrip() {
-    // Given
-    long id = 1L;
-    doNothing().when(tripRepository).deleteById(id);
+  void deleteTrip_TripExists_DeletesSuccessfully() {
+    long tripId = 1L;
+    when(tripRepository.existsById(tripId)).thenReturn(true);
 
-    // When
-    assertDoesNotThrow(() -> tripService.deleteTrip(id));
+    tripService.deleteTrip(tripId);
 
-    // Then
-    verify(tripRepository).deleteById(id);
+    verify(tripRepository).deleteById(tripId);
+  }
+
+  @Test
+  void deleteTrip_TripDoesNotExist_ThrowsTripNotFoundException() {
+    long tripId = 2L;
+    when(tripRepository.existsById(tripId)).thenReturn(false);
+
+    Exception exception =
+        assertThrows(TripNotFoundException.class, () -> tripService.deleteTrip(tripId));
+
+    assertEquals("Trip not found with id " + tripId, exception.getMessage());
   }
 
 
   @Test
-  public void getTripRecordByFilter_ValidInputs_ReturnsFilteredRecords() {
-    // Given
+  void getTripRecordByFilter_ValidInputs_ReturnsFilteredRecords() {
     LocalDateTime startDate = LocalDateTime.now();
     LocalDateTime endDate = LocalDateTime.now().plusDays(10);
     Set<String> emails = Set.of("user@example.com");
@@ -136,29 +146,24 @@ public class TripServiceImplTest {
     int limit = 10;
     Pageable pageable = PageRequest.of(page, limit, Sort.by("startDate").ascending());
 
-    Set<MemberEntity> members = Set.of(new MemberEntity());
-    when(memberService.getOrCreateMembers(emails)).thenReturn(members);
-
     List<TripEntity> tripEntities = List.of(new TripEntity());
     Page<TripEntity> tripPage = new PageImpl<>(tripEntities);
-    when(tripRepository.findByStartDateAfterAndEndDateBeforeAndAndMembersIsIn(any(), any(), eq(members), eq(pageable)))
+    when(tripRepository.findByStartDateAfterAndEndDateBefore(any(), any(), eq(pageable)))
         .thenReturn(tripPage);
 
     TripRecord tripRecord = TripRecord.builder().build();
     when(tripMapper.entityToRecord(any(TripEntity.class))).thenReturn(tripRecord);
 
-    // When
-    List<TripRecord> results = tripService.getTripRecordByFilter(startDate, endDate, emails, sortType, page, limit);
+    List<TripRecord> results =
+        tripService.getTripRecordByFilter(startDate, endDate, emails, sortType, page, limit);
 
-    // Then
     assertFalse(results.isEmpty());
     assertEquals(1, results.size());
     assertEquals(tripRecord, results.get(0));
   }
 
   @Test
-  public void getTripRecordByFilter_NoMembersFound_ReturnsEmptyList() {
-    // Given
+  void getTripRecordByFilter_NoMembersFound_ReturnsEmptyList() {
     LocalDateTime startDate = LocalDateTime.now();
     LocalDateTime endDate = LocalDateTime.now().plusDays(10);
     Set<String> emails = Set.of("user@example.com");
@@ -167,26 +172,22 @@ public class TripServiceImplTest {
     int limit = 10;
     Pageable pageable = PageRequest.of(page, limit, Sort.by("startDate").ascending());
 
-    when(memberService.getOrCreateMembers(emails)).thenReturn(new HashSet<>()); // No members found
 
     when(tripRepository.findByStartDateAfterAndEndDateBefore(any(), any(), eq(pageable)))
         .thenReturn(Page.empty());
 
-    // When
-    List<TripRecord> results = tripService.getTripRecordByFilter(startDate, endDate, emails, sortType, page, limit);
+    List<TripRecord> results =
+        tripService.getTripRecordByFilter(startDate, endDate, emails, sortType, page, limit);
 
-    // Then
     assertTrue(results.isEmpty());
   }
 
   @Test
-  public void updateTrip_NotFound_ThrowsException() {
-    // Given
+  void updateTrip_NotFound_ThrowsException() {
     long tripId = 1L;
     TripRecord updatedRecord = TripRecord.builder().build();
     when(tripRepository.findById(tripId)).thenReturn(Optional.empty());
 
-    // Then
     assertThrows(TripNotFoundException.class, () -> tripService.updateTrip(tripId, updatedRecord));
   }
 }

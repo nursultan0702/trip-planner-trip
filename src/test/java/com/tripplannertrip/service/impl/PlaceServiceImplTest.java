@@ -1,33 +1,36 @@
 package com.tripplannertrip.service.impl;
 
+import static com.tripplannertrip.model.DateSortType.DATE_ASC;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
 import com.tripplannertrip.entity.PlaceEntity;
 import com.tripplannertrip.entity.TripEntity;
 import com.tripplannertrip.exception.PlaceNotFoundException;
 import com.tripplannertrip.exception.TripNotFoundException;
 import com.tripplannertrip.mapper.PlaceMapper;
-import com.tripplannertrip.model.DateSortType;
 import com.tripplannertrip.model.PlaceRecord;
 import com.tripplannertrip.repository.PlaceRepository;
 import com.tripplannertrip.repository.TripRepository;
 import com.tripplannertrip.service.TripService;
+import java.time.LocalDateTime;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.time.LocalDateTime;
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
-
-import static com.tripplannertrip.model.DateSortType.DATE_ASC;
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
-
 @ExtendWith(MockitoExtension.class)
-public class PlaceServiceImplTest {
+class PlaceServiceImplTest {
 
   @Mock
   private PlaceRepository placeRepository;
@@ -42,7 +45,7 @@ public class PlaceServiceImplTest {
   private PlaceServiceImpl placeService;
 
   @Test
-  public void testGetAllPlacesByTripId_Found() {
+  void testGetAllPlacesByTripId_Found() {
     Long tripId = 1L;
     TripEntity trip = new TripEntity();
     PlaceEntity place = new PlaceEntity();
@@ -57,14 +60,14 @@ public class PlaceServiceImplTest {
   }
 
   @Test
-  public void testGetAllPlacesByTripId_TripNotFound() {
+  void testGetAllPlacesByTripId_TripNotFound() {
     Long tripId = 1L;
     when(tripRepository.findById(tripId)).thenThrow(new TripNotFoundException(tripId));
     assertThrows(TripNotFoundException.class, () -> placeService.getAllPlacesByTripId(tripId));
   }
 
   @Test
-  public void testGetPlaceById_Found() {
+  void testGetPlaceById_Found() {
     Long id = 1L;
     PlaceEntity place = new PlaceEntity();
     PlaceRecord expected = PlaceRecord.builder().build();
@@ -76,14 +79,14 @@ public class PlaceServiceImplTest {
   }
 
   @Test
-  public void testGetPlaceById_NotFound() {
+  void testGetPlaceById_NotFound() {
     Long id = 1L;
     when(placeRepository.findById(id)).thenReturn(Optional.empty());
     assertThrows(PlaceNotFoundException.class, () -> placeService.getPlaceById(id));
   }
 
   @Test
-  public void testCreatePlace() {
+  void testCreatePlace() {
     PlaceRecord inputRecord =
         PlaceRecord.builder()
             .name("Spain")
@@ -101,7 +104,7 @@ public class PlaceServiceImplTest {
   }
 
   @Test
-  public void testUpdatePlace_FoundAndUpdated() {
+  void testUpdatePlace_FoundAndUpdated() {
     Long id = 1L;
     PlaceRecord updateRecord = PlaceRecord.builder()
         .placeId(id)
@@ -109,7 +112,7 @@ public class PlaceServiceImplTest {
         .country("France")
         .city("Paris")
         .images(Collections.emptyList()).build();
-    PlaceEntity existingEntity = new PlaceEntity();
+    PlaceEntity existingEntity = PlaceEntity.builder().images(Collections.emptyList()).build();
     when(placeRepository.findById(id)).thenReturn(Optional.of(existingEntity));
     when(placeRepository.save(existingEntity)).thenReturn(existingEntity);
     when(placeMapper.placeEntityToPlaceRecord(existingEntity)).thenReturn(updateRecord);
@@ -119,7 +122,7 @@ public class PlaceServiceImplTest {
   }
 
   @Test
-  public void testUpdatePlace_NotFound() {
+  void testUpdatePlace_NotFound() {
     Long id = 1L;
     PlaceRecord updateRecord = PlaceRecord.builder().build();
     when(placeRepository.findById(id)).thenReturn(Optional.empty());
@@ -128,16 +131,30 @@ public class PlaceServiceImplTest {
   }
 
   @Test
-  public void testDeletePlace() {
-    Long id = 1L;
-    doNothing().when(placeRepository).deleteById(id);
+  void deletePlace_PlaceExists_DeletesSuccessfully() {
+    Long existingId = 1L;
+    when(placeRepository.existsById(existingId)).thenReturn(true);
 
-    assertDoesNotThrow(() -> placeService.deletePlace(id));
-    verify(placeRepository).deleteById(id);
+    placeService.deletePlace(existingId);
+
+    verify(placeRepository).deleteById(existingId);
   }
 
   @Test
-  public void testGetPlacesByCriteria() {
+  void deletePlace_PlaceDoesNotExist_ThrowsException() {
+    Long nonExistingId = 2L;
+    when(placeRepository.existsById(nonExistingId)).thenReturn(false);
+
+    Exception exception = assertThrows(PlaceNotFoundException.class, () -> {
+      placeService.deletePlace(nonExistingId);
+    });
+
+    assertEquals(String.format("Place with id %d not found", nonExistingId),
+        exception.getMessage());
+  }
+
+  @Test
+  void testGetPlacesByCriteria() {
     LocalDateTime startDate = LocalDateTime.now();
     LocalDateTime endDate = LocalDateTime.now().plusDays(10);
     Set<String> emails = Set.of("example@example.com");
@@ -150,11 +167,13 @@ public class PlaceServiceImplTest {
     PlaceEntity placeEntity = new PlaceEntity();
     PlaceRecord placeRecord = PlaceRecord.builder().build();
 
-    when(tripService.getTripEntityByFilter(startDate, endDate, emails, DATE_ASC, page, limit)).thenReturn(trips);
+    when(tripService.getTripEntityByFilter(startDate, endDate, emails, DATE_ASC, page,
+        limit)).thenReturn(trips);
     when(trip.getPlaces()).thenReturn(Set.of(placeEntity));
     when(placeMapper.placeEntityToPlaceRecord(placeEntity)).thenReturn(placeRecord);
 
-    List<PlaceRecord> results = placeService.getPlacesByCriteria(startDate, endDate, emails, country, page, limit);
+    List<PlaceRecord> results =
+        placeService.getPlacesByCriteria(startDate, endDate, emails, country, page, limit);
     assertTrue(results.contains(placeRecord));
     assertEquals(1, results.size());
   }

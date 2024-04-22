@@ -17,13 +17,11 @@ import com.tripplannertrip.repository.PlaceRepository;
 import com.tripplannertrip.repository.TripRepository;
 import com.tripplannertrip.service.MemberService;
 import com.tripplannertrip.service.TripService;
-
 import java.time.LocalDateTime;
-import java.util.HashSet;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
-
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -45,32 +43,10 @@ public class TripServiceImpl implements TripService {
 
   @Override
   public TripRecord createTrip(User user, TripRecord tripRecord) {
-
-    var places = findExistingPlaces(tripRecord.placeIds());
-    var members = memberService.getOrCreateMembers(tripRecord.members());
-
-    var newTripEntity = TripEntity.builder()
-        .userId(user.getUsername())
-        .name(tripRecord.name())
-        .description(tripRecord.description())
-        .startDate(tripRecord.startDate())
-        .endDate(tripRecord.endDate())
-        .members(members)
-        .places(places)
-        .build();
-
+    var newTripEntity = buildNewTripEntity(user, tripRecord);
     var savedTrip = tripRepository.save(newTripEntity);
-    createOutboxMessage(savedTrip);
-
+    notifyTripCreation(savedTrip);
     return tripMapper.entityToRecord(savedTrip);
-  }
-
-  private void createOutboxMessage(TripEntity savedTrip) {
-    var outbox = NotificationOutbox.builder()
-        .status(PENDING)
-        .tripEntity(savedTrip)
-        .build();
-    notificationOutboxRepository.save(outbox);
   }
 
   @Override
@@ -94,9 +70,9 @@ public class TripServiceImpl implements TripService {
 
     var sorting = getSortingType(sort);
     Pageable pageable = PageRequest.of(page, limit, sorting);
-    var members = memberService.getOrCreateMembers(emails);
+    var members = memberService.getMembers(emails);
 
-    Page<TripEntity> tripPage = getTripByFilter(startDate, endDate, members, pageable);
+    Page<TripEntity> tripPage = filterTrips(startDate, endDate, members, pageable);
 
     return tripPage.getContent().stream()
         .map(tripMapper::entityToRecord)
@@ -107,32 +83,85 @@ public class TripServiceImpl implements TripService {
   public List<TripEntity> getTripEntityByFilter(LocalDateTime startDate, LocalDateTime endDate,
                                                 Set<String> emails, DateSortType sort, int page,
                                                 int limit) {
-    var sorting = getSortingType(sort);
+    Sort sorting = getSortingType(sort);
     Pageable pageable = PageRequest.of(page, limit, sorting);
-    var members = memberService.getOrCreateMembers(emails);
+    Set<MemberEntity> members = memberService.getOrCreateMembers(emails);
 
-    return getTripByFilter(startDate, endDate, members, pageable).getContent();
+    return filterTrips(startDate, endDate, members, pageable).getContent();
   }
 
-  private Page<TripEntity> getTripByFilter(LocalDateTime startDate, LocalDateTime endDate,
-                                           Set<MemberEntity> members, Pageable pageable) {
-    boolean membersPresent = members != null && !members.isEmpty();
+  @Override
+  public TripRecord updateTrip(long tripId, TripRecord tripRecord) {
+    TripEntity tripEntity = getTripEntity(tripId);
+    updateTripEntityFromRecord(tripEntity, tripRecord);
+    TripEntity updatedTrip = tripRepository.save(tripEntity);
+    return tripMapper.entityToRecord(updatedTrip);
+  }
 
+  @Override
+  public void deleteTrip(long tripId) {
+    if (!tripRepository.existsById(tripId)) {
+      throw new TripNotFoundException(tripId);
+    }
+    tripRepository.deleteById(tripId);
+  }
+
+  private TripEntity buildNewTripEntity(User user, TripRecord tripRecord) {
+    Set<PlaceEntity> places = findExistingPlaces(tripRecord.placeIds());
+    Set<MemberEntity> members = memberService.getOrCreateMembers(tripRecord.members());
+
+    return TripEntity.builder()
+        .userId(user.getUsername())
+        .name(tripRecord.name())
+        .description(tripRecord.description())
+        .startDate(tripRecord.startDate())
+        .endDate(tripRecord.endDate())
+        .members(members)
+        .places(places)
+        .build();
+  }
+
+  private void notifyTripCreation(TripEntity tripEntity) {
+    NotificationOutbox outbox = NotificationOutbox.builder()
+        .status(PENDING)
+        .tripEntity(tripEntity)
+        .build();
+    notificationOutboxRepository.save(outbox);
+  }
+
+  private Page<TripEntity> filterTrips(LocalDateTime startDate, LocalDateTime endDate,
+                                       Set<MemberEntity> members, Pageable pageable) {
+    if (members.isEmpty()) {
+      return filterTripsWithoutMembers(startDate, endDate, pageable);
+    } else {
+      return filterTripsWithMembers(startDate, endDate, members, pageable);
+    }
+  }
+
+  private Page<TripEntity> filterTripsWithoutMembers(LocalDateTime startDate, LocalDateTime endDate,
+                                                     Pageable pageable) {
     if (startDate != null && endDate != null) {
-      return membersPresent ?
-          tripRepository.findByStartDateAfterAndEndDateBeforeAndAndMembersIsIn(startDate, endDate,
-              members, pageable) :
-          tripRepository.findByStartDateAfterAndEndDateBefore(startDate, endDate, pageable);
+      return tripRepository.findByStartDateAfterAndEndDateBefore(startDate, endDate, pageable);
     } else if (startDate != null) {
-      return membersPresent ?
-          tripRepository.findByStartDateAfterAndMembersIsIn(startDate, members, pageable) :
-          tripRepository.findByStartDateAfter(startDate, pageable);
+      return tripRepository.findByStartDateAfter(startDate, pageable);
     } else if (endDate != null) {
-      return membersPresent ?
-          tripRepository.findByEndDateBeforeAndMembersIsIn(endDate, members, pageable) :
-          tripRepository.findByEndDateBefore(endDate, pageable);
+      return tripRepository.findByEndDateBefore(endDate, pageable);
     } else {
       return Page.empty();
+    }
+  }
+
+  private Page<TripEntity> filterTripsWithMembers(LocalDateTime startDate, LocalDateTime endDate,
+                                                  Set<MemberEntity> members, Pageable pageable) {
+    if (startDate != null && endDate != null) {
+      return tripRepository.findByStartDateAfterAndEndDateBeforeAndMembersIn(startDate, endDate,
+          members, pageable);
+    } else if (startDate != null) {
+      return tripRepository.findByStartDateAfterAndMembersIn(startDate, members, pageable);
+    } else if (endDate != null) {
+      return tripRepository.findByEndDateBeforeAndMembersIn(endDate, members, pageable);
+    } else {
+      return tripRepository.findByMembersIn(members, pageable);
     }
   }
 
@@ -140,40 +169,42 @@ public class TripServiceImpl implements TripService {
     return sort == DATE_ASC ? Sort.by("startDate").ascending() : Sort.by("startDate").descending();
   }
 
-
-  @Override
-  public TripRecord updateTrip(long tripId, TripRecord tripRecord) {
-    var tripEntity = tripRepository.findById(tripId)
+  private TripEntity getTripEntity(long tripId) {
+    return tripRepository.findById(tripId)
         .orElseThrow(() -> new TripNotFoundException(tripId));
+  }
 
-    var places = findExistingPlaces(tripRecord.placeIds());
-    var members = memberService.getOrCreateMembers(tripRecord.members());
-
+  private void updateTripEntityFromRecord(TripEntity tripEntity, TripRecord tripRecord) {
     tripEntity.setName(tripRecord.name());
     tripEntity.setDescription(tripRecord.description());
     tripEntity.setStartDate(tripRecord.startDate());
     tripEntity.setEndDate(tripRecord.endDate());
+    updateMembers(tripEntity, tripRecord.members());
+    updatePlaces(tripEntity, tripRecord.placeIds());
+  }
+
+  private void updateMembers(TripEntity tripEntity, Set<String> memberEmails) {
+    Set<MemberEntity> members = memberService.getOrCreateMembers(memberEmails);
     tripEntity.setMembers(members);
+  }
+
+  private void updatePlaces(TripEntity tripEntity, List<Long> placeIds) {
+    Set<PlaceEntity> places = findExistingPlaces(placeIds);
+    tripEntity.getPlaces().clear();
     tripEntity.getPlaces().addAll(places);
-
-    tripEntity = tripRepository.save(tripEntity);
-
-    return tripMapper.entityToRecord(tripEntity);
   }
 
-  @Override
-  public void deleteTrip(long tripId) {
-    tripRepository.deleteById(tripId);
-  }
-
-  private Set<PlaceEntity> findExistingPlaces(List<Long> ids) {
-    if (ids == null || ids.isEmpty()) {
-      return new HashSet<>();
+  private Set<PlaceEntity> findExistingPlaces(List<Long> placeIds) {
+    if (placeIds == null || placeIds.isEmpty()) {
+      return Collections.emptySet();
     }
-
-    return ids.stream()
-        .map(id -> placeRepository.findById(id)
-            .orElseThrow(() -> new PlaceNotFoundException(id)))
+    return placeIds.stream()
+        .map(this::findOrThrowPlace)
         .collect(Collectors.toSet());
+  }
+
+  private PlaceEntity findOrThrowPlace(Long id) {
+    return placeRepository.findById(id)
+        .orElseThrow(() -> new PlaceNotFoundException(id));
   }
 }
