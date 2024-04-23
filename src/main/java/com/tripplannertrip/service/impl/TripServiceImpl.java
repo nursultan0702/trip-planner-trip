@@ -85,7 +85,7 @@ public class TripServiceImpl implements TripService {
                                                 int limit) {
     Sort sorting = getSortingType(sort);
     Pageable pageable = PageRequest.of(page, limit, sorting);
-    Set<MemberEntity> members = memberService.getOrCreateMembers(emails);
+    Set<MemberEntity> members = memberService.getMembers(emails);
 
     return filterTrips(startDate, endDate, members, pageable).getContent();
   }

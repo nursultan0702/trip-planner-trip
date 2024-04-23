@@ -1,16 +1,12 @@
 package com.tripplannertrip.controller;
 
 import static io.restassured.RestAssured.given;
-import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import com.tripplannertrip.AbstractIntegrationTest;
 import com.tripplannertrip.model.TripRecord;
-import com.tripplannertrip.service.TripService;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.security.test.context.support.WithMockUser;
 
@@ -18,9 +14,6 @@ class TripControllerTest extends AbstractIntegrationTest {
 
   @LocalServerPort
   private int port;
-
-  @Autowired
-  private TripService tripService;
 
   // Utility to get the base URI for tests
   private String getBaseUri() {
@@ -41,7 +34,7 @@ class TripControllerTest extends AbstractIntegrationTest {
   }
 
   @Test
-  @WithMockUser(username="testUser")
+  @WithMockUser(username = "testUser")
   void testCreateTrip() {
     TripRecord newTrip = TripRecord.builder()
         .name("Discovering New Places")

@@ -14,6 +14,7 @@ import com.tripplannertrip.service.PlaceService;
 import com.tripplannertrip.service.TripService;
 import java.time.LocalDateTime;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -75,6 +76,9 @@ public class PlaceServiceImpl implements PlaceService {
 
 
   private void setTrip(PlaceRecord placeRecord, PlaceEntity placeEntity) {
+    if (placeEntity.getTrips() == null) {
+      placeEntity.setTrips(new HashSet<>());
+    }
     Optional.ofNullable(placeRecord.tripIds())
         .ifPresent(tripIds -> placeEntity.getTrips().addAll(getTrips(tripIds)));
   }
