@@ -111,7 +111,7 @@ public class TripServiceImpl implements TripService {
     Set<MemberEntity> members = memberService.getOrCreateMembers(tripRecord.members());
 
     return TripEntity.builder()
-        .userId(user.getUsername())
+        .userId(getUsername(user))
         .name(tripRecord.name())
         .description(tripRecord.description())
         .startDate(tripRecord.startDate())
@@ -119,6 +119,10 @@ public class TripServiceImpl implements TripService {
         .members(members)
         .places(places)
         .build();
+  }
+
+  private static String getUsername(User user) {
+    return user != null ? user.getUsername() : null;
   }
 
   private void notifyTripCreation(TripEntity tripEntity) {
